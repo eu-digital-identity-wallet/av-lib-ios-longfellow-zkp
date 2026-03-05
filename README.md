@@ -39,7 +39,7 @@ Then add `LongfellowZkp` to your target's dependencies:
 .target(
     name: "YourTarget",
     dependencies: [
-        .product(name: "LongfellowZkp", package: "LongfellowZkp"),
+        .product(name: "LongfellowZkp", package: "av-lib-ios-longfellow-zkp"),
     ]
 ),
 ```
