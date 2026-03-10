@@ -214,7 +214,7 @@ The `MdocZK.xcframework` bundles the native Longfellow static libraries for iOS 
 
 ### Prerequisites
 
-The pre-compiled native static libraries can be obtained from the [Multipaz](https://github.com/openwallet-foundation/multipaz) repository at [`multipaz-longfellow/src/iosMain/nativeLibs`](https://github.com/openwallet-foundation/multipaz/tree/main/multipaz-longfellow/src/iosMain/nativeLibs). Copy the architecture-specific folders into the same directory as `create_xcframework.sh`.
+The pre-compiled native static libraries can be obtained from the [Multipaz](https://github.com/openwallet-foundation/multipaz) repository at the folder `multipaz-longfellow/src/iosMain/nativeLibs`. Copy the architecture-specific folders into the same directory as the following `create_xcframework.sh`.
 
 The script expects the following directory structure alongside `create_xcframework.sh`:
 
