@@ -16,6 +16,7 @@ limitations under the License.
 
 import Foundation
 import SwiftCBOR
+import MdocZK
 import MdocDataModel18013
 import os.log
 
