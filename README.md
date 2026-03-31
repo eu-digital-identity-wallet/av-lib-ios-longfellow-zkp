@@ -256,7 +256,7 @@ Tests are located in `Tests/av-lib-ios-longfellow-zkpTests/` and include:
 - Full proof generation flow (prover + verifier)
 - Document CBOR round-trip encoding
 
-**ZKP Proof Calculation via Silent Push — Summary**
+## ZKP Proof Calculation via Silent Push
 
 The DC API Document Provider extension process cannot currently perform zero-knowledge proof (ZKP) due to memory constraints. However, this work can by done by the main app process, which has more available memory.
 
