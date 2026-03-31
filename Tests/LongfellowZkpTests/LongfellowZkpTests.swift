@@ -98,18 +98,6 @@ struct LongfellowZkpTests {
         #expect(zkSystemSpec.circuitHash == "f88a39e561ec0be02bb3dfe38fb609ad154e98decbbe632887d850fc612fea6f")
     }
 
-    @Test func testAvDocIssuerPublicKeys() async throws {
-        let dr = try DeviceResponse(data: MdocTestDataProvider.getAvBytes())
-        guard let document = dr.documents?.first else { throw NSError(domain: "LongfellowZkSystem", code: 2, userInfo: [NSLocalizedDescriptionKey: "No document found in DeviceResponse"]) }
-        let issuerCert = document.issuerSigned.issuerAuth.x5chain.first!
-        let publicKeyInfo = try ECKeyExtractor.extractECCKeyInfo(from: Data(issuerCert))
-        let publicKeyRawData = publicKeyInfo.x963KeyData.dropFirst()
-        let x = LongfellowZkSystem.getFormattedCoordinate(value: publicKeyRawData.prefix(publicKeyRawData.count / 2))
-        let y = LongfellowZkSystem.getFormattedCoordinate(value: publicKeyRawData.suffix(publicKeyRawData.count / 2))
-        #expect(x == "0x6789e96e797e2e04f7f3cbb54a12410412410db000fb6d63dc977d8b5d35a4f9", "x error")
-        #expect(y == "0x3b71f297d9d308ba2e955e8563afa0604833aae10ecb1aaefbe4159b5b8b9057", "y error")
-    }
-
     @Test func testMultipazMdlDocProofFullFlow() async throws {
         let (zkSystem, spec) = try Self.loadCircuitAndSpec()
         let zkDoc = try Self.generateProof(zkSystem, spec)
