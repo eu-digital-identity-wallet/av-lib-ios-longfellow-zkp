@@ -234,10 +234,7 @@ The `MdocZK.xcframework` bundles the native Longfellow static libraries for iOS 
 
 ### Prerequisites
 
-The pre-compiled native static libraries can be obtained from the [Multipaz](https://github.com/openwallet-foundation/multipaz) repository at the folder `multipaz-longfellow/src/iosMain/nativeLibs`. Copy the architecture-specific folders into the same directory as this [script](https://github.com/niscy-eudiw/longfellow-zk/blob/main/scripts/multipaz_build_xcframework.sh) file.
-The output will be at `output/MdocZK.xcframework`.
-
-Alternatively, you can build the native static libraries from our forked Longfellow C [codebase](https://github.com/niscy-eudiw/longfellow-zk), and the build [script](https://github.com/niscy-eudiw/longfellow-zk/blob/main/scripts/build_xcframework.sh) file.
+You can build the native static libraries from our forked Longfellow C [codebase](https://github.com/niscy-eudiw/longfellow-zk), and the build [script](https://github.com/niscy-eudiw/longfellow-zk/blob/main/scripts/build_xcframework.sh) file.
 
 ## Dependencies
 
@@ -258,6 +255,17 @@ Tests are located in `Tests/av-lib-ios-longfellow-zkpTests/` and include:
 - Issuer public key extraction
 - Full proof generation flow (prover + verifier)
 - Document CBOR round-trip encoding
+
+**ZKP Proof Calculation via Silent Push — Summary**
+
+The DC API Document Provider extension process cannot currently perform zero-knowledge proof (ZKP) due to memory constraints. However, this work can by done by the main app process, which has more available memory.
+
+The two processes communicate through shared storage. When the extension needs a ZKP computed, it writes request data to shared storage and sends a [silent push notification](https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app) to wake the main app in the background. Silent push notifications are remote notifications with only the `content-available: 1` flag — they don't display alerts or play sounds, but wake the app and give it up to 30 seconds to perform work. 
+
+Once woken, the main app reads the request, performs the ZKP computation using bundled cryptographic circuit files, and writes the result back to shared storage. The extension polls for the result on a short interval.
+
+In the rare case the silent push doesn't arrive or the main app doesn't produce a result in time, the extension can fall back to generating a response without a ZKP.
+
 
 ### Disclaimer
 The released software is a initial development release version: 
