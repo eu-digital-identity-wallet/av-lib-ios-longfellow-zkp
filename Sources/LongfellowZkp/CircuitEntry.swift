@@ -30,12 +30,18 @@ public struct CircuitEntry: Sendable {
     /// The circuit filename (without path separators).
     public let circuitFilename: String
     /// The file URL pointing to the circuit binary data.
-    public let circuitUrl: URL
+    public let circuitUrl: URL?
+    /// The pregenerated circuit binary data
+    public let circuitData: Data?
 
     /// Reads and returns the raw circuit bytes from disk.
     /// - Returns: The circuit binary data.
     /// - Throws: An error if the file cannot be read.
-    public func getCircuitBytes() throws -> Data { try Data(contentsOf: circuitUrl) }
+    public func getCircuitBytes() throws -> Data {
+        if let circuitData { return circuitData }
+        else if let circuitUrl { return try Data(contentsOf: circuitUrl) }
+        else { throw NSError(domain: "\(CircuitEntry.self)", code: 0, userInfo: [NSLocalizedDescriptionKey: "Bytes or URL not specified"]) }
+    }
     
     /// - Parameters:
     ///   - circuitFilename: the name of the circuit file
@@ -44,6 +50,20 @@ public struct CircuitEntry: Sendable {
     public init(circuitFilename: String, circuitUrl: URL) throws {
         let spec = try LongfellowZkSystem.parseCircuitFilename(circuitFilename)
         self.circuitUrl = circuitUrl
+        self.circuitData = nil
+        self.circuitFilename = circuitFilename
+        zkSystemSpec = spec.0
+        longfellowZkSystemSpec = spec.1
+    }
+    
+    /// - Parameters:
+    ///   - circuitFilename: the name of the circuit file
+    ///   - circuitBytes: the data of the circuit file
+    /// - Returns: true if the circuit was added successfully, false otherwise
+    public init(circuitFilename: String, circuitData: Data) throws {
+        let spec = try LongfellowZkSystem.parseCircuitFilename(circuitFilename)
+        self.circuitUrl = nil
+        self.circuitData = circuitData
         self.circuitFilename = circuitFilename
         zkSystemSpec = spec.0
         longfellowZkSystemSpec = spec.1

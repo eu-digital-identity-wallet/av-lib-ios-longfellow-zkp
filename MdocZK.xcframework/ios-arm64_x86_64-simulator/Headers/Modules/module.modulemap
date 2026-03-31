@@ -1,4 +1,0 @@
-module MdocZK {
-    header "../mdoc_zk.h"
-    export *
-}
