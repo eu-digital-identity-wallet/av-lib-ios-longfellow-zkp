@@ -11,6 +11,8 @@ LongfellowZkp provides a Swift-friendly interface to the native Longfellow ZK pr
 - **Proof generation** — produce ZK proofs from mdoc `DeviceResponse` CBOR data
 - **Proof verification** — verify proofs against issuer public keys and session transcripts
 - **Circuit management** — load and match circuit files by version, attribute count, and hash
+- **ZK system spec lookup** — retrieve built-in ZK specs by number of attributes from the native library
+- **Circuit generation** — dynamically generate circuit binary data at runtime from a ZK system spec
 - **EC key extraction** — extract P-256/P-384/P-521 public keys from X.509 issuer certificates
 - **ZK system spec negotiation** — parse and match `ZkSystemSpec` from DCQL JSON requests
 
@@ -57,17 +59,9 @@ The main module containing the ZKP logic:
 | `LongfellowZkSystem` | Core struct implementing `ZkSystemProtocol`. Manages circuits and performs proof generation/verification. |
 | `LongfellowZkSystemSpec` | Describes a ZK specification: system name, circuit hash, version, number of attributes, and block encoding parameters. |
 | `CircuitEntry` | Represents a loaded circuit file with its parsed spec and URL reference. |
-| `LongfellowNatives` | Low-level bridge to the native C prover/verifier functions in `MdocZK`. |
+| `LongfellowNatives` | Low-level bridge to the native C prover/verifier functions in `MdocZK`. Also provides ZK system spec lookup and circuit generation. |
 | `NativeAttribute` | A namespace/key/value triple representing a single mdoc attribute for proof operations. |
 
-### `MdocZkp`
-
-Supporting utilities:
-
-| Type | Description |
-|---|---|
-| `ECKeyExtractor` | Extracts EC public keys (P-256, P-384, P-521) from DER-encoded X.509 certificates. |
-| `ProofVerificationFailureException` | Error thrown when proof verification fails. |
 
 ### `MdocZK` (XCFramework)
 
@@ -100,7 +94,33 @@ let circuit = try CircuitEntry(circuitFilename: filename, circuitUrl: circuitURL
 let zkSystem = LongfellowZkSystem(circuits: [circuit])
 ```
 
-### 2. Matching a ZkSystemSpec from a DCQL Request
+### 2. Retrieving a ZK System Spec
+
+Use `LongfellowNatives.getLongfellowZkSystemSpec` to look up the built-in ZK system specification for a given number of attributes. This queries the native `MdocZK` library's embedded spec table:
+
+```swift
+let spec = LongfellowNatives.getLongfellowZkSystemSpec(numAttributes: 1)
+// spec.system        → "longfellow-libzk-v1"
+// spec.circuitHash   → "137e5a75ce72..."
+// spec.version       → 6
+// spec.numAttributes → 1
+// spec.blockEncHash  → 4096
+// spec.blockEncSig   → 2945
+```
+
+### 3. Generating a Circuit
+
+Use `LongfellowNatives.generateCircuit` to generate the circuit binary data from a `LongfellowZkSystemSpec`. This calls the native `generate_circuit` function:
+
+```swift
+let spec = LongfellowNatives.getLongfellowZkSystemSpec(numAttributes: 1)
+let circuitData = LongfellowNatives.generateCircuit(jzkSpec: spec)
+// circuitData contains the binary circuit that can be used for proof generation/verification
+```
+
+This is useful when you need to generate circuits dynamically at runtime rather than bundling pre-built circuit files.
+
+### 4. Matching a ZkSystemSpec from a DCQL Request
 
 When a verifier sends a list of supported ZK system specs, find the best match:
 
@@ -129,7 +149,7 @@ let matchedSpec = zkSystem.getMatchingSystemSpec(
 )
 ```
 
-### 3. Generating a ZK Proof
+### 5. Generating a ZK Proof
 
 ```swift
 import SwiftCBOR
@@ -161,7 +181,7 @@ let zkDocument = try zkSystem.generateProof(
 )
 ```
 
-### 4. Verifying a ZK Proof
+### 6. Verifying a ZK Proof
 
 ```swift
 try zkSystem.verifyProof(
@@ -185,7 +205,7 @@ if !circuits.isEmpty {
 
 You need also to include the circuits in your bundle. You can find them in the [multipaz repository](https://github.com/openwallet-foundation/multipaz) in the folder `samples/testapp/src/commonMain/composeResources/files/longfellow-libzk-v1`
 
-### 5. Extracting Issuer Public Key
+### 7. Extracting Issuer Public Key
 
 ```swift
 let (x, y) = try LongfellowZkSystem.getPublicKeyFromIssuerCert(document: document)
