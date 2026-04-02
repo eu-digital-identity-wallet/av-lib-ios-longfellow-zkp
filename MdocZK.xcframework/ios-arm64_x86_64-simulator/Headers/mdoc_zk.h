@@ -136,7 +136,7 @@ static const char kDefaultDocType[] = "org.iso.18013.5.1.mDL";
 // An upper-bound on the decompressed circuit size. It is better to make this
 // bound tight to avoid memory failure in the resource restricted Android
 // gmscore environment.
-static const size_t kCircuitSizeMax = 150000000;
+static const size_t kCircuitSizeMax = 130000000;
 
 // The run_mdoc2_prover method takes byte-oriented inputs that describe a
 // circuit, mdoc, the public key of the issuer for the mdoc, a transcript
