@@ -131,7 +131,7 @@ public struct LongfellowZkSystem: ZkSystemProtocol {
         let circuitHash = circuitNameParts[4]
         let longfellowSpec = LongfellowZkSystemSpec(
             system: Self.longFellowSystemName, circuitHash: circuitHash, numAttributes: numAttributes, version: version, blockEncHash: blockEncHash, blockEncSig: blockEncSig)
-        let spec = ZkSystemSpec(id: "\(Self.longFellowSystemName)_\(circuitFileName)", system: Self.longFellowSystemName, params: longfellowSpec.toZkParams())
+        let spec = ZkSystemSpec(zkSystemId: "\(Self.longFellowSystemName)_\(circuitFileName)", system: Self.longFellowSystemName, params: longfellowSpec.toZkParams())
         return (spec, longfellowSpec)
     }
 

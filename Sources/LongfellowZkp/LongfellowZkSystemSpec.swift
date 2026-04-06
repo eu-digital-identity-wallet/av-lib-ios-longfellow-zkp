@@ -75,7 +75,7 @@ extension LongfellowZkSystemSpec {
     }
 
     public var zkSystemSpec: ZkSystemSpec {
-        ZkSystemSpec(id: id, system: system, params: toZkParams())
+        ZkSystemSpec(zkSystemId: id, system: system, params: toZkParams())
     }
 }
 
