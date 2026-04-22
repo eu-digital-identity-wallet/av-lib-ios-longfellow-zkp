@@ -261,9 +261,46 @@ Tests are located in `Tests/av-lib-ios-longfellow-zkpTests/` and include:
 
 The DC API Document Provider extension process cannot currently perform zero-knowledge proof (ZKP) due to memory constraints. However, this work can by done by the main app process, which has more available memory.
 
-The two processes communicate through shared storage. When the extension needs a ZKP computed, it writes request data to shared storage and sends a [silent push notification](https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app) to wake the main app in the background. Silent push notifications are remote notifications with only the `content-available: 1` flag — they don't display alerts or play sounds, but wake the app and give it up to 30 seconds to perform work. 
+The two processes can communicate through shared storage using a common [app group](https://developer.apple.com/documentation/Xcode/configuring-app-groups). When the extension needs a ZKP computed, it writes request data to shared storage and sends a [silent push notification](https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app) to wake the main app in the background. Silent push notifications are remote notifications with only the `content-available: 1` flag — they don't display alerts or play sounds, but wake the app and give it up to 30 seconds to perform work. 
+
+```swift
+ struct RequestAuthorizationView: View {
+	static let sharedStore = UserDefaults(suiteName: "group.longfellow")
+	@AppStorage("fcmToken", store: Self.sharedStore) var fcmToken: String?
+	@AppStorage("dcApiResponseData", store: Self.sharedStore) var dcApiResponseData: Data?
+	@AppStorage("dcApiRawRequestData", store: Self.sharedStore) var dcApiRawRequestData: Data?
+...
+func sendResponse(_ rawRequest: IdentityDocumentWebPresentmentRawRequest, _ originUrl: String?) async throws -> ISO18013MobileDocumentResponse {
+			dcApiResponseData = nil
+			let extReq = DcApiExtensionRequest(rawRequestData: rawRequest.requestData, originUrl: originUrl)
+			if let extReq, let encReq = try? JSONEncoder().encode(extReq), let fcmToken {
+					dcApiRawRequestData = encReq
+					try await SilentPushSender.send(to: fcmToken)
+					for _ in 0..<12 {
+							try await Task.sleep(for: .milliseconds(500))
+							if let dcApiResponseData { return ISO18013MobileDocumentResponse(responseData: dcApiResponseData) }
+					}
+			}
+			// cancel request or send without zkp
+	}
+```
 
 Once woken, the main app reads the request, performs the ZKP computation using bundled cryptographic circuit files, and writes the result back to shared storage. The extension polls for the result on a short interval.
+
+```swift
+	func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+		Task { do { try await MainApp.calculateZkproof(); completionHandler(.newData) } catch {
+			completionHandler(.failed) } }
+	}
+
+    static func calculateZkproof() async throws {
+			let dcApiRawRequestData = sharedStore?.data(forKey: "dcApiRawRequestData")
+			guard let dcApiRawRequestData, let remoteRawRequest = try? JSONDecoder().decode(DcApiExtensionRequest.self, from: dcApiRawRequestData) else { return }
+			let dcApiHandler = DcApiHandler(serviceName: Bundle.main.bundleIdentifier!, accessGroup: Constants.accessGroup)
+			let dcApiResponseData = try await dcApiHandler.buildAndEncryptResponse(remoteRawRequest: remoteRawRequest, zkSystemRepository: makeZkSystemRepository())
+			sharedStore?.set(dcApiResponseData, forKey: "dcApiResponseData")
+	}
+```
 
 In the rare case the silent push doesn't arrive or the main app doesn't produce a result in time, the extension can fall back to generating a response without a ZKP.
 
