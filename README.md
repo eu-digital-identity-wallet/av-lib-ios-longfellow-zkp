@@ -346,7 +346,7 @@ static func makeZkSystemRepository() -> ZkSystemRepository {
 
 **Key considerations:**
 
-- **iOS 26:** Pass `nil` for `zkSystemRepository` when ZKP delegation to the main app is unavailable or incomplete
+- **iOS 26:** Pass `nil` for `zkSystemRepository`.
 - **iOS 27+:** Load circuits using `LongfellowZkSystem.enumerateLongfellowCircuits()` and pass the initialized `ZkSystemRepository` to enable in-extension ZKP computation. Include the circuit files in the extension bundle.
 - **Memory workaround:** For iOS 26, implement the silent push mechanism described above to offload proof calculation to the main app process
 
