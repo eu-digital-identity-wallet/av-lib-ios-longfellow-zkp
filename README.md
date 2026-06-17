@@ -205,6 +205,8 @@ if !circuits.isEmpty {
 
 You need also to include the circuits in your bundle. You can find them in the [multipaz repository](https://github.com/openwallet-foundation/multipaz) in the folder `samples/testapp/src/commonMain/composeResources/files/longfellow-libzk-v1`
 
+
+
 ### 7. Extracting Issuer Public Key
 
 ```swift
@@ -304,6 +306,49 @@ Once woken, the main app reads the request, performs the ZKP computation using b
 
 In the rare case the silent push doesn't arrive or the main app doesn't produce a result in time, the extension can fall back to generating a response without a ZKP.
 
+## Integrating with the DC API Extension
+
+When building a DC API handler for the Document Provider extension, you need to account for platform memory constraints when computing ZK proofs. iOS 26 extensions have limited memory and cannot perform ZKP calculations, while iOS 27+ provides sufficient memory for in-extension computation.
+
+The following example demonstrates how to conditionally manage ZK proof computation based on the iOS version:
+
+```swift
+func sendResponse(_ rawRequest: IdentityDocumentWebPresentmentRawRequest, _ originUrl: String?) async throws -> ISO18013MobileDocumentResponse {
+    dcApiResponseData = nil
+    var zkSystemRepository: ZkSystemRepository? = nil
+    let systemVersion = UIDevice.current.systemVersion
+    let isIOS26 = systemVersion.hasPrefix("26")
+    
+    if isIOS26 {
+        // iOS 26 has extension memory limit, compute zk proof from iOS (work around)
+        // Delegate ZKP computation to the main app via shared storage and silent push
+        // see ZKP Proof Calculation via Silent Push section above
+    } else {
+        // iOS 27+ has enough memory, compute in ZK Proof directly in extension
+        zkSystemRepository = Self.makeZkSystemRepository()
+    }
+    
+    let responseData = try await dcApiHandler.buildAndEncryptResponse(
+        rawRequest: rawRequest,
+        originUrl: originUrl,
+        zkSystemRepository: zkSystemRepository
+    )
+    
+    return ISO18013MobileDocumentResponse(responseData: responseData)
+}
+
+    
+static func makeZkSystemRepository() -> ZkSystemRepository {
+        let circuits = LongfellowZkSystem.enumerateLongfellowCircuits()
+        return ZkSystemRepository(systems: [LongfellowZkSystem(circuits: circuits)])
+}
+```
+
+**Key considerations:**
+
+- **iOS 26:** Pass `nil` for `zkSystemRepository` when ZKP delegation to the main app is unavailable or incomplete
+- **iOS 27+:** Load circuits using `LongfellowZkSystem.enumerateLongfellowCircuits()` and pass the initialized `ZkSystemRepository` to enable in-extension ZKP computation. Include the circuit files in the extension bundle.
+- **Memory workaround:** For iOS 26, implement the silent push mechanism described above to offload proof calculation to the main app process
 
 ### Disclaimer
 The released software is a initial development release version: 
