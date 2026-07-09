@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 import Foundation
-import MdocZK
+import CMdocZK
 
 /// Errors that can occur during ZK proof generation.
 public enum ProofGenerationError: Error {

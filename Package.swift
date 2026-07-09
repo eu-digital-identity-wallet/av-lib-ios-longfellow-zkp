@@ -22,10 +22,16 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .binaryTarget(name: "MdocZK", path: "./MdocZK.xcframework"),
+		.target(
+			name: "CMdocZK",
+			path: "Sources/CMdocZK",
+			publicHeadersPath: "include"
+		),
         .target(
             name: "LongfellowZkp",
             dependencies: [
                 .target(name: "MdocZK"),
+				.target(name: "CMdocZK"),
                 .product(name: "X509", package: "swift-certificates"),
                 "SwiftCBOR",
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
