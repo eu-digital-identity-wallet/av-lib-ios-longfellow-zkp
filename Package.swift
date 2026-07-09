@@ -15,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-certificates.git", from: "1.19.0"),
-        .package(url: "https://github.com/niscy-eudiw/SwiftCBOR.git", from: "0.6.4"),
+        .package(url: "https://github.com/niscy-eudiw/SwiftCBOR.git", from: "0.6.5"),
 		.package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-iso18013-data-model.git", from: "0.14.0"),
     ],
     targets: [
