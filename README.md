@@ -249,11 +249,22 @@ The output will be at `output/MdocZK.xcframework`.
 
 ## Testing
 
+Run tests on the iPhone Air simulator with Fastlane, following the data-model package's setup. Install Xcode with an iPhone Air simulator, Ruby/Bundler, and `xcbeautify`, then run from the repository root:
+
 ```bash
-swift test
+bundle install
+bundle exec fastlane ios tests
 ```
 
-Tests are located in `Tests/av-lib-ios-longfellow-zkpTests/` and include:
+To run tests with coverage and generate an HTML report:
+
+```bash
+bundle exec fastlane ios code_coverage
+```
+
+The coverage lane requires at least 50% coverage for `LongfellowZkp` and writes reports to `xcov_output/`. It opens the HTML report locally; set `CI=true` in CI to suppress opening the report and skip package plugin and macro validation.
+
+Tests are located in `Tests/LongfellowZkpTests/` and include:
 - ZK system spec parsing from DCQL JSON
 - Issuer public key extraction
 - Full proof generation flow (prover + verifier)
