@@ -1,13 +1,13 @@
 {
-  "originHash" : "f2490500d24820670e660ab02f60507d43e5c259e76bd8fe1608264cf3c27e03",
+  "originHash" : "5d66903ce420d34eecaf1302b694e326dc0e67bc21da4073446e3475d2b2cd0d",
   "pins" : [
     {
       "identity" : "eudi-lib-ios-iso18013-data-model",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-iso18013-data-model.git",
       "state" : {
-        "revision" : "87b0059b1da7b6c195fe78875637f7130cb4ac54",
-        "version" : "0.14.0"
+        "revision" : "65481ab832b19c8579f79539e4391a6b156fc408",
+        "version" : "0.26.0"
       }
     },
     {
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-syntax.git",
       "state" : {
-        "revision" : "64889f0c732f210a935a0ad7cda38f77f876262d",
-        "version" : "509.1.1"
+        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
+        "version" : "602.0.0"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/eu-digital-identity-wallet/SwiftCopyableMacro.git",
       "state" : {
-        "revision" : "d535b0836be52c846d87605adad1205445e4dc35",
-        "version" : "0.0.4"
+        "revision" : "ba0d1318b825b69d8c0bd5ae65746300c95aa972",
+        "version" : "0.0.5"
       }
     },
     {
