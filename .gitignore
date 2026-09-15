@@ -6,3 +6,10 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
+
+# Fastlane and Bundler
+/.bundle/
+/vendor/bundle/
+/fastlane/test_output/
+/fastlane/report.xml
+/xcov_output/
