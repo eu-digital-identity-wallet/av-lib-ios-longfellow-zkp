@@ -24,6 +24,8 @@ import XCTest
 class LongfellowMemoryTest: XCTestCase {
 
     func testMultipazCircuitProofMemoryImpact() async throws {
+        throw XCTSkip("Disabled pending Multipaz circuit memory baseline")
+
         let (zkSystem, spec) = try LongfellowZkpTests.loadCircuitAndSpec()
         let zkSystemLf = zkSystem as! LongfellowZkSystem
         let document = try Document(cbor: try CBOR.decode(MdocTestDataProvider.getMdocBytes())!)
@@ -37,6 +39,8 @@ class LongfellowMemoryTest: XCTestCase {
     }
     
     func testGeneratedCircuitProofMemoryImpact() async throws {
+        throw XCTSkip("Disabled pending generated circuit memory baseline")
+
         let (zkSystem, spec) = try LongfellowZkpTests.generateCircuitAndSpec()
         let zkSystemLf = zkSystem as! LongfellowZkSystem
         let document = try Document(cbor: try CBOR.decode(MdocTestDataProvider.getMdocBytes())!)

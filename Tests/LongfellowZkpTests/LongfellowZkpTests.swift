@@ -33,7 +33,7 @@ struct LongfellowZkpTests {
         // Create ZK system spec
         let longfellowSpec = LongfellowZkSystemSpec(
             system: system.name, circuitHash: comps[4], numAttributes: 1, version: 6, blockEncHash: 4096, blockEncSig: 2945)
-        let spec = ZkSystemSpec(id: "\(system.name)_\(comps[4])", system: system.name, params: longfellowSpec.toZkParams()) // id: "one_\(system.name)",
+        let spec = ZkSystemSpec(zkSystemId: "\(system.name)_\(comps[4])", system: system.name, params: longfellowSpec.toZkParams()) // id: "one_\(system.name)",
         let zkSystem = try #require(zkRepository.lookup(system.name))
         return (zkSystem, spec)
     }
@@ -49,7 +49,7 @@ struct LongfellowZkpTests {
         // Create ZK system spec
         let longfellowSpec = LongfellowZkSystemSpec(
             system: system.name, circuitHash: specLf.circuitHash, numAttributes: 1, version: Int64(specLf.version), blockEncHash: Int64(specLf.blockEncHash), blockEncSig: Int64(specLf.blockEncSig))
-        let spec = ZkSystemSpec(id: "\(system.name)_\(specLf.circuitHash)", system: system.name, params: longfellowSpec.toZkParams()) // id: "one_\(system.name)",
+        let spec = ZkSystemSpec(zkSystemId: "\(system.name)_\(specLf.circuitHash)", system: system.name, params: longfellowSpec.toZkParams()) // id: "one_\(system.name)",
         let zkSystem = try #require(zkRepository.lookup(system.name))
         return (zkSystem, spec)
     }
@@ -72,7 +72,8 @@ struct LongfellowZkpTests {
             CBOR.utf8String("documents"): CBOR.array([document.toCBOR(options: CBOROptions())]),
             CBOR.utf8String("status"): CBOR.unsignedInt(0)
         ]), options: CBOROptions())
-        let zkDoc = try zkSystem.generateProof(zkSystemSpec: spec, docBytes: longfellowDocBytes,                                   x: x, y: y, sessionTranscriptBytes: MdocTestDataProvider.getTranscript(), timestamp: testTime)
+        let zkDoc = try zkSystem.generateProof(zkSystemSpec: spec, docBytes: longfellowDocBytes, 
+		               x: x, y: y, sessionTranscriptBytes: MdocTestDataProvider.getTranscript(), timestamp: testTime)
        return zkDoc
     }
 
