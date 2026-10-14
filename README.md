@@ -96,7 +96,7 @@ let zkSystem = LongfellowZkSystem(circuits: [circuit])
 
 ### 2. Retrieving a ZK System Spec
 
-Use `LongfellowNatives.getLongfellowZkSystemSpec` to look up the built-in ZK system specification for a given number of attributes. This queries the native `MdocZK` library's embedded spec table:
+Use `LongfellowNatives.getLongfellowZkSystemSpec` to look up the built-in ZK system specification for a given number of attributes. This queries the native `MdocZK` library for the latest supported specification:
 
 ```swift
 let spec = LongfellowNatives.getLongfellowZkSystemSpec(numAttributes: 1)
@@ -236,8 +236,13 @@ The `MdocZK.xcframework` bundles the native Longfellow static libraries for iOS 
 
 ### Prerequisites
 
-The pre-compiled native static libraries can be obtained from the [Multipaz](https://github.com/openwallet-foundation/multipaz) repository at the folder `multipaz-longfellow/src/iosMain/nativeLibs`. Copy the architecture-specific folders into the same directory as this [script](multipaz_build_xcframework.sh) file.
-The output will be at `output/MdocZK.xcframework`.
+Run the [script](multipaz_build_xcframework.sh) with a local [Multipaz](https://github.com/openwallet-foundation/multipaz) checkout:
+
+```sh
+bash multipaz_build_xcframework.sh /path/to/multipaz
+```
+
+The script packages `multipaz-longfellow/src/iosMain/nativeLibs` into `output/MdocZK.xcframework` (or an output directory passed as the second argument). It requires a new output path for each run. Replace the package's root `MdocZK.xcframework` with the result and synchronize `Sources/CMdocZK/include/mdoc_zk.h` from `multipaz-longfellow/rust/include/mdoc_zk.h`, adapting the C declarations and Swift bridge to the symbols exported by the native library if its API changed.
 
 ## Dependencies
 
