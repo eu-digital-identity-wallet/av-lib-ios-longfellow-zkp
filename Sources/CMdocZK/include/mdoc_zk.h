@@ -131,8 +131,6 @@ typedef struct {
   size_t block_enc_hash, block_enc_sig;
 } ZkSpecStruct;
 
-static const char kDefaultDocType[] = "org.iso.18013.5.1.mDL";
-
 // An upper-bound on the decompressed circuit size. It is better to make this
 // bound tight to avoid memory failure in the resource restricted Android
 // gmscore environment.
@@ -161,7 +159,9 @@ MdocProverErrorCode run_mdoc_prover(
     const uint8_t* transcript, size_t tr_len, /* session transcript */
     const RequestedAttribute* attrs, size_t attrs_len,
     const char* now, /* time formatted as "2023-11-02T09:00:00Z" */
-    uint8_t** prf, size_t* proof_len, const ZkSpecStruct* zk_spec_version);
+    uint8_t** prf, size_t* proof_len,
+    const char* docType,
+    const ZkSpecStruct* zk_spec_version);
 
 // The run_mdoc2_verifier method accepts a byte representation of the circuit,
 // the public key of the issuer, the transcript, an array of RequestedAttribute
@@ -183,26 +183,14 @@ MdocVerifierErrorCode run_mdoc_verifier(
 CircuitGenerationErrorCode generate_circuit(const ZkSpecStruct* zk_spec_version,
                                             uint8_t** cb, size_t* clen);
 
-// Produces an identifier for a pair of circuits (c_1, c_2) over (Fp256, f_128)
-// respectively. This method parses the input bytes into two circuits, computes
-// the circuit's ids of each, and then computes the SHA256 hash of the two ids.
-// This method is used to identify "circuit bundles" consisting of multiple
-// circuits.
-int circuit_id(uint8_t id[/*kSHA256DigestSize*/], const uint8_t* bcp,
-               size_t bcsz, const ZkSpecStruct* zk_spec);
+// Returns the matching specification in out_spec, or -1 if no match exists.
+// A version of 0 selects the latest supported version.
+int find_zk_spec_by_attributes(size_t num_attributes, size_t version,
+                               ZkSpecStruct* out_spec);
 
-enum { kNumZkSpecs = 12 };
-// This is a hardcoded list of all the ZK specifications supported by this
-// library. Every time a new breaking change is introduced in either the circuit
-// format or its interpretation, a new version must be added here.
-// It is possible to remove old versions, if we're sure that they are not used
-// by either provers of verifiers in the wild.
-extern const ZkSpecStruct kZkSpecs[kNumZkSpecs];
-
-// Returns a static pointer to the ZkSpecStruct that matches the given system
-// name and circuit hash. Returns nullptr if no matching ZkSpecStruct is found.
-const ZkSpecStruct* find_zk_spec(const char* system_name,
-                                 const char* circuit_hash);
+// Release buffers allocated by run_mdoc_prover and generate_circuit.
+void free_mdoc_proof(uint8_t* proof, size_t len);
+void free_circuit_bytes(uint8_t* circuit, size_t len);
 
 #ifdef __cplusplus
 }
