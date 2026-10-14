@@ -1,74 +1,36 @@
 #!/bin/bash
-
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUTPUT_DIR="${SCRIPT_DIR}/output"
-FRAMEWORK_NAME="MdocZK"
+MULTIPAZ_DIR="${1:?Usage: $0 /path/to/multipaz [output-directory]}"
+NATIVE_LIBS="${MULTIPAZ_DIR}/multipaz-longfellow/src/iosMain/nativeLibs"
+OUTPUT_DIR="${2:-${SCRIPT_DIR}/output}"
+mkdir -p "${OUTPUT_DIR}"
+OUTPUT_DIR="$(cd "${OUTPUT_DIR}" && pwd)"
+FRAMEWORK_PATH="${OUTPUT_DIR}/MdocZK.xcframework"
 
-# Clean up previous builds
-rm -rf "${OUTPUT_DIR}"
-mkdir -p "${OUTPUT_DIR}/temp"
+for ARCH in arm64-iphoneos arm64-iphonesimulator x86_64-iphonesimulator; do
+    test -f "${NATIVE_LIBS}/${ARCH}/lib/libmdoc_static.a"
+done
+if [[ -e "${FRAMEWORK_PATH}" ]]; then
+    echo "Output already exists: ${FRAMEWORK_PATH}" >&2
+    exit 1
+fi
 
-# Combine device libraries
-echo "Combining device libraries..."
-libtool -static \
-    "${SCRIPT_DIR}/arm64-iphoneos/lib/libmdoc_static.a" \
-    "${SCRIPT_DIR}/arm64-iphoneos/lib/libzstd.a" \
-    -o "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_device.a"
+TEMP_DIR="$(mktemp -d "${OUTPUT_DIR}/mdoczk.XXXXXX")"
+trap 'rm -rf "${TEMP_DIR}"' EXIT
 
-# Combine simulator arm64 libraries
-echo "Combining simulator arm64 libraries..."
-libtool -static \
-    "${SCRIPT_DIR}/arm64-iphonesimulator/lib/libmdoc_static.a" \
-    "${SCRIPT_DIR}/arm64-iphonesimulator/lib/libzstd.a" \
-    -o "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_sim_arm64.a"
-
-# Combine simulator x86_64 libraries
-echo "Combining simulator x86_64 libraries..."
-libtool -static \
-    "${SCRIPT_DIR}/x86_64-iphonesimulator/lib/libmdoc_static.a" \
-    "${SCRIPT_DIR}/x86_64-iphonesimulator/lib/libzstd.a" \
-    -o "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_sim_x86_64.a"
-
-# Create fat binary for simulator
-echo "Creating simulator fat binary..."
+# Multipaz includes zstd in each native static library.
+cp "${NATIVE_LIBS}/arm64-iphoneos/lib/libmdoc_static.a" "${TEMP_DIR}/libMdocZK_device.a"
 lipo -create \
-    "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_sim_arm64.a" \
-    "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_sim_x86_64.a" \
-    -output "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_simulator.a"
+    "${NATIVE_LIBS}/arm64-iphonesimulator/lib/libmdoc_static.a" \
+    "${NATIVE_LIBS}/x86_64-iphonesimulator/lib/libmdoc_static.a" \
+    -output "${TEMP_DIR}/libMdocZK_simulator.a"
 
-# Copy headers
-cp "${SCRIPT_DIR}/arm64-iphoneos/include/"* "${OUTPUT_DIR}/temp/device-headers/"
-cp "${SCRIPT_DIR}/arm64-iphonesimulator/include/"* "${OUTPUT_DIR}/temp/simulator-headers/"
-
-# Create module map for device
-cat > "${OUTPUT_DIR}/temp/device-headers/module.modulemap" <<EOF
-module ${FRAMEWORK_NAME} {
-    header "../mdoc_zk.h"
-    export *
-}
-EOF
-
-# Create module map for simulator
-cat > "${OUTPUT_DIR}/temp/simulator-headers/module.modulemap" <<EOF
-module ${FRAMEWORK_NAME} {
-    header "../mdoc_zk.h"
-    export *
-}
-EOF
-
-# Create XCFramework
-echo "Creating XCFramework..."
+# Headers are exposed separately by the package's CMdocZK target.
 xcodebuild -create-xcframework \
-    -library "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_device.a" \
-    -headers "${OUTPUT_DIR}/temp/device-headers" \
-    -library "${OUTPUT_DIR}/temp/lib${FRAMEWORK_NAME}_simulator.a" \
-    -headers "${OUTPUT_DIR}/temp/simulator-headers" \
-    -output "${OUTPUT_DIR}/${FRAMEWORK_NAME}.xcframework"
+    -library "${TEMP_DIR}/libMdocZK_device.a" \
+    -library "${TEMP_DIR}/libMdocZK_simulator.a" \
+    -output "${FRAMEWORK_PATH}"
 
-# Clean up temp files
-rm -rf "${OUTPUT_DIR}/temp"
-
-echo "✅ XCFramework created successfully at: ${OUTPUT_DIR}/${FRAMEWORK_NAME}.xcframework"
-echo "✅ Done!"
+echo "XCFramework created at: ${FRAMEWORK_PATH}"
