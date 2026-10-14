@@ -214,6 +214,7 @@ public struct LongfellowZkSystem: ZkSystemProtocol {
             transcript: Data(sessionTranscriptBytes),
             transcriptSize: sessionTranscriptBytes.count,
             now: formatDate(timestamp: adjustedTimestamp),
+            docType: docType,
             zkSpec: longfellowZkSystemSpec,
             statements: attributes
         )

@@ -32,30 +32,25 @@ public class LongfellowNatives {
     /// - Parameter numAttributes: The number of attributes the circuit should support.
     /// - Returns: A ``LongfellowZkSystemSpec`` instance.
     public static func getLongfellowZkSystemSpec(numAttributes: Int) -> LongfellowZkSystemSpec {
-        return withUnsafePointer(to: kZkSpecs) { tuple in
-            tuple.withMemoryRebound(to: ZkSpecStruct.self, capacity: Int(kNumZkSpecs)) { specs in
-                for i in 0..<Int(kNumZkSpecs) {
-                    let spec = specs[i]
-                    if spec.num_attributes == numAttributes {
-                        var hash = spec.circuit_hash
-                        let circuitHash = withUnsafePointer(to: &hash) {
-                            $0.withMemoryRebound(to: CChar.self, capacity: 65) {
-                                String(cString: $0)
-                            }
-                        }
-                        return LongfellowZkSystemSpec(
-                            system: String(cString: spec.system),
-                            circuitHash: circuitHash,
-                            numAttributes: Int64(spec.num_attributes),
-                            version: Int64(spec.version),
-                            blockEncHash: Int64(spec.block_enc_hash),
-                            blockEncSig: Int64(spec.block_enc_sig)
-                        )
-                    }
-                }
-                fatalError("No ZK spec found for \(numAttributes) attributes")
+        var spec = ZkSpecStruct()
+        guard numAttributes > 0,
+              find_zk_spec_by_attributes(numAttributes, 0, &spec) == 0 else {
+            fatalError("No ZK spec found for \(numAttributes) attributes")
+        }
+        var hash = spec.circuit_hash
+        let circuitHash = withUnsafePointer(to: &hash) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 65) {
+                String(cString: $0)
             }
         }
+        return LongfellowZkSystemSpec(
+            system: String(cString: spec.system),
+            circuitHash: circuitHash,
+            numAttributes: Int64(spec.num_attributes),
+            version: Int64(spec.version),
+            blockEncHash: Int64(spec.block_enc_hash),
+            blockEncSig: Int64(spec.block_enc_sig)
+        )
     }
 
     /// Generates circuit bytes for the given ZK system specification.
@@ -107,11 +102,12 @@ public class LongfellowNatives {
     ///   - transcript: The session transcript data.
     ///   - transcriptSize: The size of the transcript data in bytes.
     ///   - now: The current timestamp formatted as ISO 8601 (e.g. `"2023-11-02T09:00:00Z"`).
+    ///   - docType: The document type string; defaults to the mDL document type.
     ///   - zkSpec: The Longfellow ZK system specification.
     ///   - statements: The attributes to include in the proof.
     /// - Returns: The generated proof data.
     /// - Throws: ``ProofGenerationError`` if the native prover fails or returns an empty proof.
-    public static func runMdocProver(circuit: Data, circuitSize: Int, mdoc: Data, mdocSize: Int, pkx: String, pky: String, transcript: Data, transcriptSize: Int, now: String, zkSpec: LongfellowZkSystemSpec, statements: [NativeAttribute]) throws -> Data {
+    public static func runMdocProver(circuit: Data, circuitSize: Int, mdoc: Data, mdocSize: Int, pkx: String, pky: String, transcript: Data, transcriptSize: Int, now: String, docType: String = "org.iso.18013.5.1.mDL", zkSpec: LongfellowZkSystemSpec, statements: [NativeAttribute]) throws -> Data {
         //print("// AV document\n// random: 32 bytes\n\nx:\n\(pkx)\n\ny:\n\(pky)\n\n\nsessionTranscript: (\(transcriptSize))\n\(transcript.toHexString())\n\n\nmdoc: (\(mdocSize))\n\(mdoc.toHexString())\n")
         // Allocate array for RequestedAttribute
         let requestedAttributes = UnsafeMutablePointer<RequestedAttribute>.allocate(capacity: statements.count)
@@ -198,22 +194,25 @@ public class LongfellowNatives {
                         pkx.withCString { pkxCString in
                             pky.withCString { pkyCString in
                                 now.withCString { nowCString in
-                                    return run_mdoc_prover(
-                                        circuitBase,
-                                        circuitSize,
-                                        mdocBase,
-                                        mdocSize,
-                                        pkxCString,
-                                        pkyCString,
-                                        transcriptBase,
-                                        transcriptSize,
-                                        requestedAttributes,
-                                        statements.count,
-                                        nowCString,
-                                        &proofPtr,
-                                        &proofLen,
-                                        zkSpecPtr
-                                    )
+                                    return docType.withCString { docTypeCString in
+                                        run_mdoc_prover(
+                                            circuitBase,
+                                            circuitSize,
+                                            mdocBase,
+                                            mdocSize,
+                                            pkxCString,
+                                            pkyCString,
+                                            transcriptBase,
+                                            transcriptSize,
+                                            requestedAttributes,
+                                            statements.count,
+                                            nowCString,
+                                            &proofPtr,
+                                            &proofLen,
+                                            docTypeCString,
+                                            zkSpecPtr
+                                        )
+                                    }
                                 }
                             }
                         }
