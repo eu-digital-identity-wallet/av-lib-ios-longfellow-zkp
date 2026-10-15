@@ -246,8 +246,9 @@ public struct LongfellowZkSystem: ZkSystemProtocol {
         }
         let issuerCert = msoX5chain[0]
         let publicKeyInfo = try ECKeyExtractor.extractECCKeyInfo(from: Data(issuerCert))
-        let x = Self.getFormattedCoordinate(value: publicKeyInfo.x963KeyData.prefix(publicKeyInfo.x963KeyData.count / 2))
-        let y = Self.getFormattedCoordinate(value: publicKeyInfo.x963KeyData.suffix(publicKeyInfo.x963KeyData.count / 2))
+        let publicKeyRawData = publicKeyInfo.x963KeyData.dropFirst()
+        let x = Self.getFormattedCoordinate(value: publicKeyRawData.prefix(publicKeyRawData.count / 2))
+        let y = Self.getFormattedCoordinate(value: publicKeyRawData.suffix(publicKeyRawData.count / 2))
         guard let longfellowZkSystemSpec = getLongfellowZkSystemSpec(zkSystemSpec: zkSystemSpec) else {
             throw NSError(domain: "LongfellowZkSystem", code: 1,
                          userInfo: [NSLocalizedDescriptionKey: "Circuit not found for system spec: \(zkSystemSpec)"])

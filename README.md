@@ -12,7 +12,7 @@ LongfellowZkp provides a Swift-friendly interface to the native Longfellow ZK pr
 - **Proof verification** — verify proofs against issuer public keys and session transcripts
 - **Circuit management** — load and match circuit files by version, attribute count, and hash
 - **ZK system spec lookup** — retrieve built-in ZK specs by number of attributes from the native library
-- **Circuit generation** — dynamically generate circuit binary data at runtime from a ZK system spec
+- **Circuit materialization** — load bundled circuit binary data from a ZK system spec
 - **EC key extraction** — extract P-256/P-384/P-521 public keys from X.509 issuer certificates
 - **ZK system spec negotiation** — parse and match `ZkSystemSpec` from DCQL JSON requests
 
@@ -101,24 +101,24 @@ Use `LongfellowNatives.getLongfellowZkSystemSpec` to look up the built-in ZK sys
 ```swift
 let spec = LongfellowNatives.getLongfellowZkSystemSpec(numAttributes: 1)
 // spec.system        → "longfellow-libzk-v1"
-// spec.circuitHash   → "137e5a75ce72..."
-// spec.version       → 6
+// spec.circuitHash   → "8d0792117152..."
+// spec.version       → 7
 // spec.numAttributes → 1
-// spec.blockEncHash  → 4096
-// spec.blockEncSig   → 2945
+// spec.blockEncHash  → 4151
+// spec.blockEncSig   → 4096
 ```
 
-### 3. Generating a Circuit
+### 3. Loading a Built-in Circuit
 
-Use `LongfellowNatives.generateCircuit` to generate the circuit binary data from a `LongfellowZkSystemSpec`. This calls the native `generate_circuit` function:
+Use `LongfellowNatives.generateCircuit` to retrieve circuit binary data for a `LongfellowZkSystemSpec`. The package bundles version 7 circuits for one through four attributes:
 
 ```swift
 let spec = LongfellowNatives.getLongfellowZkSystemSpec(numAttributes: 1)
 let circuitData = LongfellowNatives.generateCircuit(jzkSpec: spec)
-// circuitData contains the binary circuit that can be used for proof generation/verification
+// circuitData contains the bundled circuit for proof generation/verification
 ```
 
-This is useful when you need to generate circuits dynamically at runtime rather than bundling pre-built circuit files.
+These circuits are included in the library's SwiftPM resource bundle. The current native `generate_circuit` function reads artifacts from an absolute path on its build machine and aborts if they are absent, so the Swift API loads the packaged artifacts instead. Pass a matching supported specification, such as the one returned by `getLongfellowZkSystemSpec`.
 
 ### 4. Matching a ZkSystemSpec from a DCQL Request
 
@@ -243,6 +243,8 @@ bash multipaz_build_xcframework.sh /path/to/multipaz
 ```
 
 The script packages `multipaz-longfellow/src/iosMain/nativeLibs` into `output/MdocZK.xcframework` (or an output directory passed as the second argument). It requires a new output path for each run. Replace the package's root `MdocZK.xcframework` with the result and synchronize `Sources/CMdocZK/include/mdoc_zk.h` from `multipaz-longfellow/rust/include/mdoc_zk.h`, adapting the C declarations and Swift bridge to the symbols exported by the native library if its API changed.
+
+Keep `Sources/LongfellowZkp/Circuits` and the test circuit fixtures synchronized with the specifications supported by the native library when updating it.
 
 ## Dependencies
 
