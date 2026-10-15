@@ -99,17 +99,13 @@ struct LongfellowZkpTests {
         #expect(zkSystemSpec.circuitHash == "f88a39e561ec0be02bb3dfe38fb609ad154e98decbbe632887d850fc612fea6f", "The parsed DCQL specification should preserve the circuit hash")
     }
 
-    @Test func testMultipazMdlDocProofAndVerifyFlow() async {
-        withKnownIssue(isIntermittent: true) {
-            do {
-                let (zkSystem, spec) = try Self.loadCircuitAndSpec()
-                let zkDoc = try Self.generateProof(zkSystem, spec)
-                print("Multipaz proof generated: \(zkDoc.proof.count) bytes")
-                try zkSystem.verifyProof(zkDocument: zkDoc, zkSystemSpec: spec, sessionTranscriptBytes: MdocTestDataProvider.getTranscript())
-                print("Multipaz proof verification succeeded")
-            } catch {
-                print("Multipaz proof or verification failed: \(error)")
-            }
+    @Test func testMultipazMdlDocProofAndVerifyFlow() async throws {
+        let (zkSystem, spec) = try Self.loadCircuitAndSpec()
+        let zkDoc = try Self.generateProof(zkSystem, spec)
+        #expect(!zkDoc.proof.isEmpty)
+        try zkSystem.verifyProof(zkDocument: zkDoc, zkSystemSpec: spec, sessionTranscriptBytes: MdocTestDataProvider.getTranscript())
+        #expect(throws: ProofVerificationFailureException.self) {
+            try zkSystem.verifyProof(zkDocument: zkDoc, zkSystemSpec: spec, sessionTranscriptBytes: MdocTestDataProvider.getTranscript() + [0])
         }
     }
     
@@ -117,6 +113,7 @@ struct LongfellowZkpTests {
         let (zkSystem, spec) = try Self.generateCircuitAndSpec()
         let zkDoc = try Self.generateProof(zkSystem, spec)
         #expect(zkDoc.proof.count > 0, "The generated mDL proof should contain bytes")
+        try zkSystem.verifyProof(zkDocument: zkDoc, zkSystemSpec: spec, sessionTranscriptBytes: MdocTestDataProvider.getTranscript())
     }
 
     @Test() func testDocumentEncode() async throws {
@@ -145,10 +142,15 @@ struct LongfellowZkpTests {
         print(filename)
     }
 
-    @Test func testGenerateCircuitProducesNonEmptyData() async throws {
-        let spec = LongfellowNatives.getLongfellowZkSystemSpec(numAttributes: 1)
+    @Test(arguments: 1...4)
+    func testGenerateCircuitMatchesFixture(numAttributes: Int) throws {
+        let spec = LongfellowNatives.getLongfellowZkSystemSpec(numAttributes: numAttributes)
         let circuitData = LongfellowNatives.generateCircuit(jzkSpec: spec)
-        #expect(circuitData.count > 0, "The generated circuit should contain bytes")
+        let filename = "\(spec.version)_\(spec.numAttributes)_\(spec.blockEncHash)_\(spec.blockEncSig)_\(spec.circuitHash)"
+        let fixtureURL = try #require(Bundle.module.url(forResource: filename, withExtension: nil))
+        let fixtureData = try Data(contentsOf: fixtureURL)
+        #expect(!circuitData.isEmpty)
+        #expect(circuitData == fixtureData)
     }
 
     @Test func testIssuerAuthEncodeDecode() async throws {

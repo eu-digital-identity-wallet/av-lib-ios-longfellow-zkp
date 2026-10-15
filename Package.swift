@@ -35,7 +35,8 @@ let package = Package(
                 .product(name: "X509", package: "swift-certificates"),
                 "SwiftCBOR",
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
-            ]
+            ],
+            resources: [.process("Circuits")]
         ),
         .testTarget(
             name: "LongfellowZkpTests",

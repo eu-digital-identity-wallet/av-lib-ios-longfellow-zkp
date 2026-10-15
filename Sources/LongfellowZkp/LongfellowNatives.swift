@@ -53,40 +53,20 @@ public class LongfellowNatives {
         )
     }
 
-    /// Generates circuit bytes for the given ZK system specification.
+    /// Returns the bundled circuit bytes for the given ZK system specification.
+    ///
+    /// The native `generate_circuit` implementation materializes prebuilt artifacts
+    /// from its build machine's filesystem and aborts when those files are absent.
+    /// Load the same artifacts from this package's resource bundle on Apple platforms.
     /// - Parameter jzkSpec: The Longfellow ZK system specification.
-    /// - Returns: The generated circuit data.
+    /// - Returns: The circuit data matching all of the specification's parameters.
     public static func generateCircuit(jzkSpec: LongfellowZkSystemSpec) -> Data {
-        let systemName = "longfellow-libzk-v1"
-        var zkSpecStruct = ZkSpecStruct()
-        systemName.withCString { cString in
-            zkSpecStruct.system = UnsafePointer(cString)
+        precondition(jzkSpec.system == "longfellow-libzk-v1", "Unsupported ZK system")
+        let filename = "\(jzkSpec.version)_\(jzkSpec.numAttributes)_\(jzkSpec.blockEncHash)_\(jzkSpec.blockEncSig)_\(jzkSpec.circuitHash)"
+        guard let url = Bundle.module.url(forResource: filename, withExtension: nil),
+              let data = try? Data(contentsOf: url), !data.isEmpty else {
+            preconditionFailure("No bundled circuit for ZK specification: \(filename)")
         }
-        withUnsafeMutablePointer(to: &zkSpecStruct) { zkSpecPtr in
-            let circuitHashPtr = UnsafeMutableRawPointer(mutating: zkSpecPtr).advanced(by: MemoryLayout.offset(of: \ZkSpecStruct.circuit_hash)!)
-            memset(circuitHashPtr, 0, 65)
-            if let circuitHashData = jzkSpec.circuitHash.data(using: .utf8) {
-                let len = min(circuitHashData.count, 64)
-                circuitHashData.withUnsafeBytes { bytes in
-                    if let baseAddress = bytes.baseAddress {
-                        memcpy(circuitHashPtr, baseAddress, len)
-                    }
-                }
-            }
-        }
-        zkSpecStruct.num_attributes = jzkSpec.numAttributes
-        zkSpecStruct.version = jzkSpec.version
-        zkSpecStruct.block_enc_hash = jzkSpec.blockEncHash
-        zkSpecStruct.block_enc_sig = jzkSpec.blockEncSig
-        var circuitPtr: UnsafeMutablePointer<UInt8>?
-        var circuitLen: UInt = 0
-        let rc = withUnsafeMutablePointer(to: &zkSpecStruct) { zkSpecPtr in
-            generate_circuit(zkSpecPtr, &circuitPtr, &circuitLen)
-        }
-        guard rc == CIRCUIT_GENERATION_SUCCESS, let buffer = circuitPtr else {
-            fatalError("Circuit generation failed with error code: \(rc.rawValue)")
-        }
-        let data = Data(bytes: buffer, count: Int(circuitLen))
         return data
     }
 
@@ -224,9 +204,8 @@ public class LongfellowNatives {
             guard let proofBuffer = proofPtr else {
                 throw ProofGenerationError.emptyProof
             }
-            let proof = Data(bytes: proofBuffer, count: Int(proofLen))
-            // Note: Consider if we need to free proofPtr here
-            return proof
+            defer { free_mdoc_proof(proofBuffer, Int(proofLen)) }
+            return Data(bytes: proofBuffer, count: Int(proofLen))
         } else {
             throw ProofGenerationError.generationFailed(errorCode: rc)
         }
