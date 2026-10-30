@@ -14,6 +14,7 @@ let package = Package(
         ),
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.7.3"),
         .package(url: "https://github.com/apple/swift-certificates.git", from: "1.19.0"),
         .package(url: "https://github.com/niscy-eudiw/SwiftCBOR.git", from: "0.6.5"),
 		.package(url: "https://github.com/eu-digital-identity-wallet/eudi-lib-ios-iso18013-data-model.git", from: "0.28.1"),
@@ -34,6 +35,7 @@ let package = Package(
 				.target(name: "CMdocZK"),
                 .product(name: "X509", package: "swift-certificates"),
                 "SwiftCBOR",
+                .product(name: "OrderedCollections", package: "swift-collections"),
                 .product(name: "MdocDataModel18013", package: "eudi-lib-ios-iso18013-data-model"),
             ],
             resources: [.process("Circuits")]

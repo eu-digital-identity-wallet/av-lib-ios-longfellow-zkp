@@ -77,6 +77,59 @@ struct LongfellowZkpTests {
        return zkDoc
     }
 
+    @Test func testProofInputsPreserveOrderThroughDeviceResponse() throws {
+        let elementNames = ["z_last", "age_above18", "a_first", "age_above60"]
+        let items = try elementNames.enumerated().map { index, name in
+            try IssuerSignedItem(cbor: .map([
+                .utf8String("digestID"): .unsignedInt(UInt64(index)),
+                .utf8String("random"): .byteString([UInt8(index)]),
+                .utf8String("elementIdentifier"): .utf8String(name),
+                .utf8String("elementValue"): .unsignedInt(UInt64(index))
+            ]))
+        }
+        let namespaces = IssuerNameSpaces(nameSpaces: [
+            "z.namespace": items,
+            "a.namespace": Array(items.reversed()),
+            "m.namespace": items
+        ])
+        let (issuerSigned, attributes) = LongfellowZkSystem.makeProofInputs(issuerNameSpaces: namespaces)
+        let expectedNamespaces = Array(namespaces.nameSpaces.keys)
+        #expect(Array(issuerSigned.keys) == expectedNamespaces)
+        for namespace in expectedNamespaces {
+            let expectedItems = try #require(namespaces[namespace])
+            #expect(Array(try #require(issuerSigned[namespace]).keys) == expectedItems.map(\.elementIdentifier))
+        }
+        let expectedItems = expectedNamespaces.flatMap { namespace in
+            namespaces[namespace]!.map { (namespace, $0) }
+        }
+        #expect(attributes.map(\.namespace) == expectedItems.map { $0.0 })
+        #expect(attributes.map(\.key) == expectedItems.map { $0.1.elementIdentifier })
+        #expect(attributes.map(\.value) == expectedItems.map { Data($0.1.elementValue.encode()) })
+
+        let document = ZkDocument(documentData: ZkDocumentData(
+            zkSystemSpecId: "test-spec", docType: "test-doctype",
+            timestamp: Date(timeIntervalSince1970: 1_750_000_000),
+            issuerSigned: issuerSigned, deviceSigned: [:], msoX5chain: nil
+        ), proof: Data([1, 2, 3]))
+        let response = DeviceResponse(zkDocuments: [document])
+        let decoded = try DeviceResponse(data: response.toCBOR(options: CBOROptions()).encode())
+        let decodedDocument = try #require(decoded.zkDocuments?.first)
+        #expect(decodedDocument.documentDataBytes == document.documentDataBytes)
+        #expect(Array(decodedDocument.documentData.issuerSigned.keys) == expectedNamespaces)
+        let decodedAttributes = decodedDocument.documentData.issuerSigned.flatMap { namespace, elements in
+            elements.map { NativeAttribute(namespace: namespace, key: $0.key, value: Data($0.value.encode())) }
+        }
+        #expect(decodedAttributes.map(\.namespace) == attributes.map(\.namespace))
+        #expect(decodedAttributes.map(\.key) == attributes.map(\.key))
+        #expect(decodedAttributes.map(\.value) == attributes.map(\.value))
+    }
+
+    @Test func testProofInputsWithoutIssuerNamespaces() {
+        let (issuerSigned, attributes) = LongfellowZkSystem.makeProofInputs(issuerNameSpaces: nil)
+        #expect(issuerSigned.isEmpty)
+        #expect(attributes.isEmpty)
+    }
+
     @Test func testZkSystemSpecFromDcql() async throws {
         let jsonString = """
         {
@@ -103,6 +156,10 @@ struct LongfellowZkpTests {
         let (zkSystem, spec) = try Self.loadCircuitAndSpec()
         let zkDoc = try Self.generateProof(zkSystem, spec)
         #expect(!zkDoc.proof.isEmpty)
+        let response = DeviceResponse(zkDocuments: [zkDoc])
+        let decoded = try DeviceResponse(data: response.toCBOR(options: CBOROptions()).encode())
+        let decodedDocument = try #require(decoded.zkDocuments?.first)
+        try zkSystem.verifyProof(zkDocument: decodedDocument, zkSystemSpec: spec, sessionTranscriptBytes: MdocTestDataProvider.getTranscript())
         try zkSystem.verifyProof(zkDocument: zkDoc, zkSystemSpec: spec, sessionTranscriptBytes: MdocTestDataProvider.getTranscript())
         #expect(throws: ProofVerificationFailureException.self) {
             try zkSystem.verifyProof(zkDocument: zkDoc, zkSystemSpec: spec, sessionTranscriptBytes: MdocTestDataProvider.getTranscript() + [0])
