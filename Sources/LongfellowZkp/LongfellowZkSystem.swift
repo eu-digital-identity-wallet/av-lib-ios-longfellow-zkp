@@ -16,6 +16,7 @@ limitations under the License.
 
 import Foundation
 import SwiftCBOR
+import OrderedCollections
 import CMdocZK
 import MdocDataModel18013
 import os.log
@@ -190,17 +191,7 @@ public struct LongfellowZkSystem: ZkSystemProtocol {
         guard let document = dr.documents?.first else { throw NSError(domain: "LongfellowZkSystem", code: 2, userInfo: [NSLocalizedDescriptionKey: "No document found in DeviceResponse"]) }
         let docType = document.docType
         let issuerCert = document.issuerSigned.issuerAuth.x5chain.first!
-        var attributes: [NativeAttribute] = []
-        var issuerSigned: [String: [String: CBOR]] = [:]
-        for (namespaceName, issuerSignedItems) in document.issuerSigned.issuerNameSpaces?.nameSpaces ?? [:] {
-            var values: [String: CBOR] = [:]
-            for issuerSignedItem in issuerSignedItems {
-                values[issuerSignedItem.elementIdentifier] = issuerSignedItem.elementValue
-                let attr = NativeAttribute(namespace: namespaceName, key: issuerSignedItem.elementIdentifier, value: Data(CBOR.encode(issuerSignedItem.elementValue)))
-                attributes.append(attr)
-            }
-            issuerSigned[namespaceName] = values
-        }
+        let (issuerSigned, attributes) = Self.makeProofInputs(issuerNameSpaces: document.issuerSigned.issuerNameSpaces)
         // According to Longfellow-ZK spec, can't have any fractional seconds.
         let adjustedTimestamp = timestamp.truncateToWholeSeconds()
         let (xi, yi) = if x == nil || y == nil { try Self.getPublicKeyFromIssuerCert(document: document)} else { ("", "")}
@@ -229,6 +220,22 @@ public struct LongfellowZkSystem: ZkSystemProtocol {
             ), proof: proof,
         )
         return zkDocument
+    }
+
+    /// Preserves the statement order in both namespace maps and element arrays on the wire.
+    static func makeProofInputs(issuerNameSpaces: IssuerNameSpaces?) -> (issuerSigned: OrderedDictionary<String, OrderedDictionary<String, CBOR>>, attributes: [NativeAttribute]) {
+        var attributes: [NativeAttribute] = []
+        var issuerSigned: OrderedDictionary<String, OrderedDictionary<String, CBOR>> = [:]
+        for (namespaceName, issuerSignedItems) in issuerNameSpaces?.nameSpaces ?? [:] {
+            var values: OrderedDictionary<String, CBOR> = [:]
+            for issuerSignedItem in issuerSignedItems {
+                values[issuerSignedItem.elementIdentifier] = issuerSignedItem.elementValue
+                let attr = NativeAttribute(namespace: namespaceName, key: issuerSignedItem.elementIdentifier, value: Data(CBOR.encode(issuerSignedItem.elementValue)))
+                attributes.append(attr)
+            }
+            issuerSigned[namespaceName] = values
+        }
+        return (issuerSigned, attributes)
     }
 
     /// Verifies a zero-knowledge proof contained in a ``ZkDocument``.
